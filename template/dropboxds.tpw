@@ -1,0 +1,567 @@
+#EXTENSION(DropBoxDS,'DropBox Datastore API support'),APPLICATION
+#! --------------------------------------------------------------------------
+#SHEET
+  #TAB('General')
+    #BOXED('DropBox Datastore API support')
+      #DISPLAY('Template                    Version 1.00')
+      #DISPLAY('Assembly                    Version 1.0.0.0')
+    #ENDBOXED
+    #DISPLAY('')
+    #ENABLE(%ProgramExtension = 'EXE'),CLEAR
+      #PROMPT('Enable Registration-Free Activation ', CHECK),%dbxAddDependency,DEFAULT(1),AT(10)
+      #PROMPT('Link manifest', CHECK),%dbxLinkManifest,DEFAULT(1),AT(10)
+      #PROMPT('Copy DLLs to output folder', CHECK),%dbxCopyToOutput,DEFAULT(1),AT(10)
+    #ENDENABLE
+    #DISPLAY
+    #DISPLAY
+    #BOXED, WHERE(%CWVersion < 7100), SECTION, AT(, 170)
+      #DISPLAY('Check this off if you have link errors ''Duplicate symbols...''')
+      #PROMPT('Link oleautcg.lib:',CHECK),%LinkOleAutcgC6,DEFAULT(1),AT(12)
+    #ENDBOXED
+    #BOXED, WHERE(%CWVersion >= 7100), SECTION, AT(, 170)
+      #DISPLAY('Check this off if you have link errors ''Duplicate symbols...''')
+      #PROMPT('Link oleautcg.lib:',CHECK),%LinkOleAutcgC7,DEFAULT(0),AT(12)
+    #ENDBOXED
+    #BOXED, HIDE
+      #PROMPT('Link oleautcg.lib:',CHECK),%LinkOleAutcg,AT(12)
+    #ENDBOXED
+  #ENDTAB
+  #TAB('Tables')
+    #DISPLAY('Select Dropbox tables:')
+    #PROMPT('Tables in DCT:', FROM(%GlobalData,%GlobalDataInDictionary=1 AND %GlobalDataLevel=1 AND %GlobalDataID <> '',%GlobalDataID)),%dbxTables,SELECTION('Tables in DCT'),UNIQUE,INLINE
+  #ENDTAB
+  #TAB('Hidden'),WHERE(%False)
+    #PROMPT('Template version:', @s10),%dbxTPLVersion,DEFAULT('1.00')
+    #PROMPT('Assembly name:', @s20), %dbxAssemblyName,DEFAULT('ClaDropBoxDS')
+    #PROMPT('Assembly version:', @s16),%dbxAssemblyVersion,DEFAULT('1.0.0.0')
+  #ENDTAB
+#ENDSHEET
+#! --------------------------------------------------------------------------
+#AT(%BeforeGenerateApplication)
+  #pdefine('_SVDllMode_',0)
+  #pdefine('_SVLinkMode_',1)
+  #IF(%CWVersion < 7100)
+    #SET(%LinkOleAutcg, %LinkOleAutcgC6)
+  #ELSE
+    #SET(%LinkOleAutcg, %LinkOleAutcgC7)
+  #ENDIF
+  #pdefine('_ecgOleAutLinkMode_',%LinkOleAutcg)
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%AfterGeneratedApplication)
+  #IF(%dbxAddDependency = '1')
+    #SET(%dbxAssemblyVersion, '1.0.0.0')
+    #CALL(%AddDependency, %dbxAssemblyName, %dbxAssemblyVersion, %dbxLinkManifest)
+  #ENDIF
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%AfterGlobalIncludes)
+  #IF(%AppTemplateFamily='ABC')
+    #ADD(%GlobalIncludeList,'dbxDS.inc')
+  #ELSE
+    #ADD(%CustomGlobalDeclarationIncludes,'dbxDS.inc')
+  #ENDIF
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%CustomGlobalDeclarations)
+  #IF(%CWVersion >= 8000)
+    #IF(%dbxCopyToOutput='1')
+      #PROJECT('None(ClaDropBoxDS.dll), CopyToOutputDirectory=Always')
+      #PROJECT('None(BobbyTables.dll), CopyToOutputDirectory=Always')
+      #PROJECT('None(Newtonsoft.Json.dll), CopyToOutputDirectory=Always')
+    #ELSE  
+      #PROJECT('None(ClaDropBoxDS.dll), CopyToOutputDirectory=Never')
+      #PROJECT('None(BobbyTables.dll), CopyToOutputDirectory=Never')
+      #PROJECT('None(Newtonsoft.Json.dll), CopyToOutputDirectory=Never')
+    #ENDIF
+  #ENDIF
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%AfterFileDeclarations)
+  #FOR(%dbxTables)
+    #FIX(%GlobalData, %dbxTables)
+Cdbx%[16]GlobalDataID CLASS(CdbxTable), TYPE
+!-- "file buffer"
+Record                 GROUP, PRE(Record)
+#INSERT(%GenClassFields, %dbxTables)
+                       END
+!-- read/write file buffer from/to Dropbox
+ReadRecord             PROCEDURE(), DERIVED
+WriteRecord            PROCEDURE(), DERIVED
+                     END
+  #ENDFOR
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%ProgramProcedures)
+#IF(%ProgramExtension<>'DLL' AND ~%GlobalExternal)
+  #FOR(%dbxTables)
+    #FIX(%GlobalData, %dbxTables)
+Cdbx%[4]GlobalDataID.ReadRecord  PROCEDURE()
+  CODE
+  CLEAR(SELF.Record)
+#INSERT(%GenReadWriteRecord, %dbxTables, 'READ')
+Cdbx%[4]GlobalDataID.WriteRecord  PROCEDURE()
+  CODE
+#INSERT(%GenReadWriteRecord, %dbxTables, 'WRITE')
+  #ENDFOR
+#ENDIF
+#ENDAT
+#! --------------------------------------------------------------------------
+#! --------------------------------------------------------------------------
+#CONTROL(dbxBrowseBox,'Dropbox browse list'),REQ(DropBoxDS),DESCRIPTION('Dropbox browse on ' & %dbxTable),MULTI,WINDOW,WRAP(List)
+#PROMPT('Table:',FROM(%dbxtables)),%dbxTable,REQ
+#PROMPT('Datastore ID:',OPTFIELD),%dbxDsId
+#PROMPT('OAuth token:',OPTFIELD),%dbxOAToken
+#PROMPT('Do not load',CHECK),%dbxDontLoad,AT(10)
+#!
+  CONTROLS
+    LIST,AT(,,150,100),USE(?dbxList),IMM,FROM(dbxQueue:Browse),MSG('Browsing Records'),VSCROLL
+  END
+#!
+#ATSTART
+#DECLARE(%dbxTableName)
+#DECLARE(%dbxVar)
+#DECLARE(%ListControl)
+#FOR(%Control),WHERE(%ControlInstance = %ActiveTemplateInstance)
+  #CASE(%ControlOriginal)
+  #OF('?dbxList')
+    #SET(%ListControl,%Control)
+    #BREAK
+  #ENDCASE
+#ENDFOR
+#DECLARE(%ListQueue)
+#FIX(%Control,%ListControl)
+#SET(%ListQueue,EXTRACT(%ControlStatement,'FROM',1))
+#DECLARE(%QueueField),MULTI
+#DECLARE(%QueueFieldAssignment,%QueueField)
+#DECLARE(%QueueFieldHasColor,%QueueField)
+#DECLARE(%QueueFieldHasIcon,%QueueField)
+#DECLARE(%QueueFieldHasTree,%QueueField)
+#DECLARE(%QueueFieldHasStyle,%QueueField)
+#DECLARE(%QueueFieldHasTip,%QueueField)
+#CALL(%BuildQueueFields,%ListControl)
+#ENDAT
+#!
+#AT(%DataSection),PRIORITY(3500),DESCRIPTION('dbx Class instance and Queue for ' & %dbxTable)
+#FIX(%Control,%ListControl)
+#INSERT(%ConstructQueue)
+#INSERT(%ConstructClass)
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%AfterWindowOpening), PRIORITY(9500)
+#INSERT(%InitDbxTable)
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%LocalProcedures)
+#INSERT(%ImplementClass)
+#ENDAT
+#! --------------------------------------------------------------------------
+#! --------------------------------------------------------------------------
+#CONTROL(dbxBrowseUpdateButtons,'Update records from a Browse Box'),DESCRIPTION('Update a Record from Browse Box on ' & %dbxTable),REQ(dbxBrowseBox)
+  CONTROLS
+       BUTTON('&Insert'),AT(,,,),USE(?bInsert)
+       BUTTON('&Change'),AT(,,,),USE(?bChange)
+       BUTTON('&Delete'),AT(,,,),USE(?bDelete)
+  END
+  #PREPARE
+    #FOR(%dbxTables),WHERE(%dbxTables=%dbxTable)
+      #DECLARE(%dbxTableName)
+      #FIX(%GlobalData, %dbxTables)
+      #SET(%dbxTableName, %GlobalDataID)
+    #ENDFOR
+  #ENDPREPARE  
+  #DISPLAY('Ipdate procedure must be prototyped as')
+  #DISPLAY('(Cdbx' & %dbxTableName &' pTable, BYTE pRequest(')
+  #PROMPT('Update Procedure',PROCEDURE),%UpdateProcedure,PROP(PROP:DropWidth,140)
+  #PROMPT('Allow Edit via Popup',CHECK),%EditViaPopup,DEFAULT(1)
+#! --------------------------------------------------------------------------
+#ATSTART
+  #DECLARE(%InsertControl)
+  #DECLARE(%ChangeControl)
+  #DECLARE(%DeleteControl)
+  #FOR(%Control),WHERE(%ControlInstance = %ActiveTemplateInstance)
+    #CASE(%ControlOriginal)
+    #OF('?bInsert')
+      #SET(%InsertControl,%Control)
+    #OF('?bChange')
+      #SET(%ChangeControl,%Control)
+    #OF('?bDelete')
+      #SET(%DeleteControl,%Control)
+    #ENDCASE
+  #ENDFOR
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%ControlEventHandling,%InsertControl,'Accepted'),PRIORITY(5000)
+%dbxVar.Insert()
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%ControlEventHandling,%ChangeControl,'Accepted'),PRIORITY(5000)
+%dbxVar.Update()
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%ControlEventHandling,%DeleteControl,'Accepted'),PRIORITY(5000)
+%dbxVar.Delete()
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%dbxClassMembers)
+Insert                 PROCEDURE(),BOOL,PROC,DERIVED
+Update                 PROCEDURE(),BOOL,PROC,DERIVED
+Delete                 PROCEDURE(),BOOL,PROC,DERIVED
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%dbxUpdateMethodsImplementation)
+#INSERT(%ImplementUpdateMethods)
+#ENDAT
+#! --------------------------------------------------------------------------
+#! --------------------------------------------------------------------------
+#! --------------------------------------------------------------------------
+#GROUP(%InitDbxTable)
+#DECLARE(%DsId)
+#DECLARE(%OAToken)
+#DECLARE(%IDField)
+#SET(%DsId, CALL(%GetOptFieldValue, %dbxDsId))
+#SET(%OAToken, CALL(%GetOptFieldValue, %dbxOAToken))
+#SET(%IDField, CALL(%GetIDField, %dbxTable))
+SETCURSOR(CURSOR:Wait)
+IF %dbxVar.Initialize(%OAToken, %DsId, '%dbxTableName', '%IDField')
+#IF(NOT %dbxDontLoad)
+  %dbxVar.SelectAll()
+#ENDIF
+END
+%dbxVar.ListFeq = %ListControl
+SETCURSOR()
+#! --------------------------------------------------------------------------
+#GROUP(%GetQueueDataType, %FLabel),AUTO,PRESERVE
+#DECLARE(%Declr)
+#DECLARE(%RVal)
+#IF(INLIST(%FLabel, %LocalData))
+  #FIX(%LocalData, %FLabel)
+  #SET(%Declr, %LocalDataStatement)
+#ELSIF(INLIST(%FLabel, %GlobalData))
+  #FIX(%GlobalData, %FLabel)
+  #SET(%Declr, %GlobalDataStatement)
+#ELSIF(INLIST(%FLabel, %ModuleData))
+  #FIX(%ModuleData, %FLabel)
+  #SET(%Declr, %ModuleDataStatement)
+#ELSE
+  #FIND(%Field, %FLabel)
+  #IF(%Field = %FLabel)
+    #SET(%Declr, %FieldStatement)
+  #ENDIF
+#ENDIF
+#!
+#IF(NOT %Declr)
+  #FOR(%LocalData)
+    #IF(%FLabel = %LocalDataFull)
+      #SET(%Declr, %LocalDataStatement)
+      #BREAK
+    #ENDIF  
+  #ENDFOR
+#ENDIF
+#IF(NOT %Declr)
+  #FOR(%GlobalData)
+    #IF(%FLabel = %GlobalDataFull)
+      #SET(%Declr, %GlobalDataStatement)
+      #BREAK
+    #ENDIF  
+  #ENDFOR
+#ENDIF
+#IF(NOT %Declr)
+  #FOR(%ModuleData)
+    #IF(%FLabel = %ModuleDataFull)
+      #SET(%Declr, %ModuleDataStatement)
+      #BREAK
+    #ENDIF  
+  #ENDFOR
+#ENDIF
+#!
+#IF(%Declr)
+  #IF(SUB(%Declr, 1, 5) = 'GROUP')                        #!Groups and memos have a string populated into the queue
+    #IF(EXTRACT(%Declr, 'DIM'))
+      #SET(%RVal, 'STRING(SIZE(' & %FLabel & '[1]))')
+    #ELSE
+      #SET(%RVal, 'STRING(SIZE(' & %FLabel & '))')
+    #ENDIF
+  #ELSIF(SUB(%Declr, 1, 4) = 'MEMO')
+    #SET(%RVal, 'STRING(SIZE(' & %FLabel & '))')
+  #ELSIF(EXTRACT(%Declr, 'DIM'))
+    #EQUATE(%i, INSTRING(',DIM', %Declr, 1, 1))           
+    #ASSERT(%i > 0, 'Could not find DIM in ' & %Declr)
+    #SET(%RVal, SUB(%Declr, 1, %i - 1))                   #!DIM is always first attribute
+  #ELSE
+    #SET(%RVal, 'LIKE(' & %FLabel & ')  ! ' & %Declr)                  #!A non-dimensioned 'flat' field so ok to use LIKE in queue
+  #ENDIF
+#ELSE
+  #SET(%RVal, 'STRING(1)')
+#ENDIF
+#RETURN(%RVal)
+#! --------------------------------------------------------------------------
+#GROUP(%BuildQueueFields,%ControlID),PRESERVE
+  #FIX(%Control,%ControlID)
+  #FOR(%ControlField)
+    #SET(%ValueConstruct,%ControlField)
+    #ADD(%QueueField,%ValueConstruct)
+    #SET(%QueueFieldAssignment,%ControlField)
+    #SET(%QueueFieldHasColor,%ControlFieldHasColor)
+    #SET(%QueueFieldHasTree,%ControlFieldHasTree)
+    #SET(%QueueFieldHasStyle,%ControlFieldHasStyle)
+    #SET(%QueueFieldHasTip,%ControlFieldHasTip)
+    #SET(%QueueFieldHasIcon,%ControlFieldHasIcon)
+  #ENDFOR
+#! --------------------------------------------------------------------------
+#GROUP(%ConstructQueue)
+  #DECLARE(%QFieldType)
+  #DECLARE(%QFieldTipComment)
+  #DECLARE(%LocAnyHasColor)
+  #SET(%LocAnyHasColor,0)
+%[20]ListQueue QUEUE,PRE(%ListQueue)
+  #FOR(%QueueField)
+    #SET(%QFieldType, %GetQueueDataType(%QueueFieldAssignment))
+%[22]QueueField %QFieldType
+    #IF(%QueueFieldHasColor)
+       #SET(%LocAnyHasColor,1)
+NormalFG              LONG
+NormalBG              LONG
+SelectedFG            LONG
+SelectedBG            LONG
+    #ENDIF
+    #IF(%QueueFieldHasIcon)
+%[15]QueueField_Icon LONG
+    #ENDIF
+    #IF(%QueueFieldHasTree)
+%[14]QueueField_Level LONG
+    #ENDIF
+    #IF(%QueueFieldHasStyle)
+%[14]QueueField_Style LONG
+    #ENDIF
+    #IF(%QueueFieldHasTip)
+%[16]QueueField_Tip STRING(80)
+    #ENDIF
+  #ENDFOR
+                     END
+#! --------------------------------------------------------------------------
+#GROUP(%ConstructClass)
+#FOR(%dbxTables),WHERE(%dbxTables=%dbxTable)
+  #FIX(%GlobalData, %dbxTables)
+  #SET(%dbxTableName, %GlobalDataID)
+  #SET(%dbxVar, 'dbx'& %dbxTableName)
+#ENDFOR
+%[20]dbxVar CLASS(Cdbx%dbxTableName)
+Q                      &%ListQueue
+ListFeq                SIGNED
+Pairs                  &FieldPairsClass  !"left" - Record, "right" - Queue
+
+Construct              PROCEDURE()
+Destruct               PROCEDURE(), DERIVED
+Select                 PROCEDURE(STRING colname,? colvalue,STRING operation,BOOL ignoreCase),BOOL,PROC,DERIVED
+SelectAll              PROCEDURE(),BOOL,PROC,DERIVED
+Next                   PROCEDURE(),BOOL,PROC,DERIVED
+Previous               PROCEDURE(),BOOL,PROC,DERIVED
+#EMBED(%dbxClassMembers, 'Record Update methods'),%dbxVar,HIDE
+                     END
+#! --------------------------------------------------------------------------
+#GROUP(%ImplementClass)
+%[20]dbxVar.Construct PROCEDURE()
+  CODE
+  SELF.Q &= %ListQueue
+  SELF.Pairs &= NEW FieldPairsClass
+  SELF.Pairs.Init()
+#FOR(%QueueField)
+  #FOR(%GlobalData)
+    #IF(%GlobalDataFull=%QueueField)
+  SELF.Pairs.AddPair(SELF.Record.%GlobalDataID, SELF.Q.%QueueField)
+      #BREAK
+    #ENDIF  
+  #ENDFOR
+#ENDFOR
+
+%dbxVar.Destruct  PROCEDURE()
+  CODE
+  SELF.Pairs.Kill()
+  DISPOSE(SELF.Pairs)
+  
+%dbxVar.Next  PROCEDURE()
+  CODE
+  IF PARENT.Next()
+    CLEAR(SELF.Q)
+    SELF.Pairs.AssignLeftToRight()
+    ADD(SELF.Q)
+    RETURN TRUE
+  END
+  
+  RETURN FALSE
+
+%dbxVar.Previous  PROCEDURE()
+  CODE
+  IF PARENT.Previous()
+    CLEAR(SELF.Q)
+    SELF.Pairs.AssignLeftToRight()
+    RETURN TRUE
+  END
+
+  RETURN FALSE
+
+%dbxVar.Select  PROCEDURE(STRING colname,? colvalue,STRING operation,BOOL ignoreCase)
+  CODE
+  FREE(SELF.Q)
+  RETURN PARENT.Select(colname, colvalue, operation, ignoreCase)
+  
+%dbxVar.SelectAll   PROCEDURE()
+  CODE
+  FREE(SELF.Q)
+  RETURN PARENT.SelectAll()
+  
+#EMBED(%dbxUpdateMethodsImplementation),%dbxVar,HIDE
+#! --------------------------------------------------------------------------
+#GROUP(%ImplementUpdateMethods)
+%dbxVar.Insert  PROCEDURE()
+loc:RC          BOOL(FALSE)
+  CODE
+  CLEAR(SELF.Record)
+  IF %UpdateProcedure(SELF, InsertRecord) = Level:Benign
+#!    SELF.Record.Modified.Dt = TODAY()
+#!    SELF.Record.Modified.Tm = CLOCK()
+    IF PARENT.Insert()
+      CLEAR(SELF.Q)
+      SELF.Pairs.AssignLeftToRight()
+      ADD(SELF.Q)
+      DISPLAY(SELF.ListFeq)
+      loc:RC = TRUE
+    END
+  END
+
+  RETURN loc:RC
+
+%dbxVar.Update  PROCEDURE()
+loc:RC          BOOL(FALSE)
+  CODE
+  GET(SELF.Q, CHOICE(SELF.ListFeq))
+  IF NOT ERRORCODE()
+    SELF.Pairs.AssignRightToLeft()
+    IF %UpdateProcedure(SELF, ChangeRecord) = Level:Benign
+#!      SELF.Record.Modified.Dt = TODAY()
+#!      SELF.Record.Modified.Tm = CLOCK()
+      IF PARENT.Update()
+        SELF.Pairs.AssignLeftToRight()
+        PUT(SELF.Q)
+        DISPLAY(SELF.ListFeq)
+        loc:RC = TRUE
+      END
+    END
+  END
+
+  RETURN loc:RC
+
+%dbxVar.Delete  PROCEDURE()
+loc:RC          BOOL(FALSE)
+  CODE
+  GET(SELF.Q, CHOICE(SELF.ListFeq))
+  IF NOT ERRORCODE()
+    SELF.Pairs.AssignRightToLeft()
+    IF %UpdateProcedure(SELF, DeleteRecord) = Level:Benign
+      IF PARENT.Delete()
+        DELETE(SELF.Q)
+        DISPLAY(SELF.ListFeq)
+        loc:RC = TRUE
+      END
+    END
+  END
+
+  RETURN loc:RC
+#! --------------------------------------------------------------------------
+#GROUP(%GenReadWriteRecord, %pTable, %pAction)
+#EQUATE(%TableFound, %FALSE)
+#DECLARE(%GrpName)
+#DECLARE(%DateName)
+#DECLARE(%TimeName)
+#FOR(%GlobalData)
+  #IF(NOT %TableFound)
+    #IF(%GlobalData = %pTable)
+      #SET(%TableFound, %TRUE)
+    #ENDIF
+  #ELSE
+    #IF(%GlobalDataLevel=2)
+      #IF(NOT EXTRACT(%GlobalDataStatement,'GROUP'))
+        #! ordinal field
+        #IF(%GlobalDataID <> '')
+          #! not END of group
+          #IF(%pAction='READ')
+  SELF.Record.%GlobalDataID = SELF.GetField('%GlobalDataID')
+          #ELSE
+  SELF.SetField('%GlobalDataID', SELF.Record.%GlobalDataID)
+          #ENDIF
+          #CLEAR(%GrpName)
+          #CLEAR(%DateName)
+          #CLEAR(%TimeName)
+        #ELSE
+          #! END of group
+          #IF(%pAction='READ')
+  SELF.GetField('%GrpName', SELF.Record.%GrpName.%DateName, SELF.Record.%GrpName.%TimeName)
+          #ELSE
+  SELF.SetField('%GrpName', SELF.Record.%GrpName.%DateName, SELF.Record.%GrpName.%TimeName)
+          #ENDIF
+        #ENDIF
+      #ELSE
+        #! GROUP of DATE/TIME
+        #SET(%GrpName, %GlobalDataID)
+      #ENDIF
+    #ELSIF(%GlobalDataLevel=3)
+      #IF(EXTRACT(%GlobalDataStatement,'DATE'))
+        #SET(%DateName, %GlobalDataID)
+      #ELSIF(EXTRACT(%GlobalDataStatement,'TIME'))
+        #SET(%TimeName, %GlobalDataID)
+      #ENDIF  
+    #ELSIF(%GlobalDataLevel=1)
+      #! END of table declaration
+      #BREAK
+    #ENDIF  
+  #ENDIF
+#ENDFOR
+#! --------------------------------------------------------------------------
+#GROUP(%GenClassFields, %pTable)
+#EQUATE(%TableFound, %FALSE)
+#FOR(%GlobalData)
+  #IF(NOT %TableFound)
+    #IF(%GlobalData = %pTable)
+      #SET(%TableFound, %TRUE)
+    #ENDIF
+  #ELSE
+    #IF(%GlobalDataLevel>1)
+      #! table field
+%[20 + %GlobalDataLevel * 2]GlobalDataID %GlobalDataStatement
+    #ELSE
+      #! END of table declaration
+      #BREAK
+    #ENDIF  
+  #ENDIF
+#ENDFOR
+#! --------------------------------------------------------------------------
+#GROUP(%GetIDField, %pTable)
+#DECLARE(%IDField)
+#DECLARE(%DefaultIDField)
+#EQUATE(%TableFound, %FALSE)
+#FOR(%GlobalData)
+  #IF(NOT %TableFound)
+    #IF(%GlobalData = %pTable)
+      #SET(%IDField,EXTRACT(%GlobalDataUserOptions, 'IDFIELD',1))
+      #IF(%IDField)
+        #BREAK
+      #ENDIF  
+      #SET(%TableFound, %TRUE)
+    #ENDIF
+  #ELSE
+    #IF(%GlobalDataLevel>1)
+      #! table field
+      #SET(%IDField,%GlobalDataID)  #!-- 1st field is default ID if no 'IDFIELD' defined as UserOption for a table
+      #BREAK
+    #ENDIF  
+  #ENDIF
+#ENDFOR
+#RETURN(%IDField)
+#! --------------------------------------------------------------------------
+#GROUP(%GetOptFieldValue, %OptField)
+  #IF (SUB(%OptField,1,1) = '!')
+    #RETURN(SUB(%OptField, 2, LEN(%OptField) - 1))
+  #ELSE
+    #RETURN('''' & %OptField & '''')
+  #ENDIF

@@ -1,0 +1,147 @@
+#EXTENSION(DropBox,'DropBox support'),APPLICATION
+#! --------------------------------------------------------------------------
+#SHEET
+  #TAB('General')
+    #BOXED('DropBox support')
+      #BOXED('')
+        #DISPLAY('DropBox...v1.01 / Assembly...v1.0.0.0')
+      #ENDBOXED
+      #DISPLAY('')
+      #PROMPT('App Name.......',@s30),%dbxAppName,DEFAULT('')
+      #PROMPT('App Key........',@s15),%dbxAppKey,DEFAULT('')
+      #PROMPT('App Secret.....',@s15),%dbxAppSecret,DEFAULT('')
+      #PROMPT('App is Sandboxed', CHECK),%dbxAppSandbox,DEFAULT(1),AT(10)
+      #DISPLAY('')
+      #PROMPT('Declare global instance', CHECK),%dbxDeclareGlobal,DEFAULT(1),AT(10)
+      #ENABLE(%dbxDeclareGlobal)
+        #PROMPT('Name:', @s32),%dbxGlobalName,DEFAULT('gDbx'),REQ
+      #ENDENABLE
+      #DISPLAY('')
+      #ENABLE(%ProgramExtension = 'EXE'),CLEAR
+        #PROMPT('Enable Registration-Free Activation ', CHECK),%dbxAddDependency,DEFAULT(1),AT(10)
+        #PROMPT('Link manifest', CHECK),%dbxLinkManifest,DEFAULT(1),AT(10)
+        #PROMPT('Copy DLLs to output folder', CHECK),%dbxCopyToOutput,DEFAULT(1),AT(10)
+      #ENDENABLE
+    #ENDBOXED
+    #DISPLAY
+  #ENDTAB
+  #TAB('Advanced')
+    #DISPLAY
+    #BOXED, WHERE(%CWVersion < 7100), SECTION, AT(, 170)
+      #DISPLAY('Check this off if you have link errors ''Duplicate symbols...''')
+      #PROMPT('Link oleautcg.lib:',CHECK),%LinkOleAutcgC6,DEFAULT(1),AT(12)
+    #ENDBOXED
+    #BOXED, WHERE(%CWVersion >= 7100), SECTION, AT(, 170)
+      #DISPLAY('Check this off if you have link errors ''Duplicate symbols...''')
+      #PROMPT('Link oleautcg.lib:',CHECK),%LinkOleAutcgC7,DEFAULT(0),AT(12)
+    #ENDBOXED
+    #BOXED, HIDE
+      #PROMPT('Link oleautcg.lib:',CHECK),%LinkOleAutcg,AT(12)
+    #ENDBOXED
+  #ENDTAB
+  #TAB('Hidden'),WHERE(%False)
+    #PROMPT('Template version:', @s10),%dbxTPLVersion,DEFAULT('1.00')
+    #PROMPT('Assembly name:', @s20), %dbxAssemblyName,DEFAULT('ClaDropBox')
+    #PROMPT('Assembly version:', @s16),%dbxAssemblyVersion,DEFAULT('1.0.0.0')
+  #ENDTAB
+#ENDSHEET
+#! --------------------------------------------------------------------------
+#AT(%BeforeGenerateApplication)
+  #pdefine('_SVDllMode_',0)
+  #pdefine('_SVLinkMode_',1)
+  #IF(%CWVersion < 7100)
+    #SET(%LinkOleAutcg, %LinkOleAutcgC6)
+  #ELSE
+    #SET(%LinkOleAutcg, %LinkOleAutcgC7)
+  #ENDIF
+  #pdefine('_ecgOleAutLinkMode_',%LinkOleAutcg)
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%AfterGeneratedApplication)
+  #IF(%dbxAddDependency = '1')
+    #SET(%dbxAssemblyVersion, '1.0.0.0')
+    #CALL(%AddDependency, %dbxAssemblyName, %dbxAssemblyVersion, %dbxLinkManifest)
+  #ENDIF
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%AfterGlobalIncludes)
+  #IF(%AppTemplateFamily='ABC')
+    #ADD(%GlobalIncludeList,'ClaDropBoxEx.inc')
+  #ELSE
+    #ADD(%CustomGlobalDeclarationIncludes,'ClaDropBoxEx.inc')
+  #ENDIF
+#ENDAT
+#!-------------------------------------------------------------------------
+#! define Std. Application Types
+#!-------------------------------------------------------------------------
+#AT(%AfterGlobalIncludes,%ActiveTemplateInstance),PRIORITY(2001),DESCRIPTION('-- Dropbox.Equates --')
+!-- Dropbox Equates --
+Dropbox::eq:AppName         EQUATE('%dbxAppName')
+Dropbox::eq:AppKey          EQUATE('%dbxAppKey')
+Dropbox::eq:AppSecret       EQUATE('%dbxAppSecret')
+Dropbox::eq:AppSandbox      EQUATE(%dbxAppSandbox)
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%CustomGlobalDeclarations)
+  #IF(%CWVersion >= 8000)
+    #IF(%dbxCopyToOutput='1')
+      #PROJECT('None(ClaDropBox.dll), CopyToOutputDirectory=Always')
+      #PROJECT('None(ClaDropBox.tlb), CopyToOutputDirectory=Always')
+      #PROJECT('None(DropNet.dll), CopyToOutputDirectory=Always')
+      #PROJECT('None(RestSharp.dll), CopyToOutputDirectory=Always')
+    #ELSE  
+      #PROJECT('None(ClaDropBox.dll), CopyToOutputDirectory=Never')
+      #PROJECT('None(ClaDropBox.tlb), CopyToOutputDirectory=Never')
+      #PROJECT('None(DropNet.dll), CopyToOutputDirectory=Never')
+      #PROJECT('None(RestSharp.dll), CopyToOutputDirectory=Never')
+    #ENDIF
+  #ENDIF
+#ENDAT
+#! --------------------------------------------------------------------------
+#AT(%AfterFileDeclarations),WHERE(%ProgramExtension ='EXE' AND %dbxDeclareGlobal = 1)
+%[20]dbxGlobalName CLASS(dbxClientClassEx)
+OnGetAccessTokenAsyncOK         PROCEDURE(STRING accessToken,STRING accessSecret), DERIVED, PROTECTED
+OnGetAccessTokenAsyncError      PROCEDURE(HRESULT pHR,STRING pMessage), DERIVED, PROTECTED
+OnGetFileAsyncOK                PROCEDURE(STRING remoteFile,STRING localFile), DERIVED, PROTECTED
+OnGetFileAsyncError             PROCEDURE(STRING remoteFile,STRING localFile,HRESULT pHR,STRING pMessage), DERIVED, PROTECTED
+OnUploadFileAsyncOK             PROCEDURE(STRING localFile,STRING pPath,long pRevision), DERIVED, PROTECTED
+OnUploadFileAsyncError          PROCEDURE(STRING localFile,STRING remotePath,STRING remoteFilename,HRESULT pHR,STRING pMessage), DERIVED, PROTECTED
+OnDeleteAsyncOK                 PROCEDURE(STRING pPath), DERIVED, PROTECTED
+OnDeleteAsyncError              PROCEDURE(STRING pPath,HRESULT pHR,STRING pMessage), DERIVED, PROTECTED
+%[20]Null END
+#EndAt
+#! --------------------------------------------------------------------------
+#AT(%ProgramProcedures),WHERE(%ProgramExtension ='EXE' AND %dbxDeclareGlobal = 1)
+%dbxGlobalName.OnGetAccessTokenAsyncOK         PROCEDURE(STRING accessToken,STRING accessSecret)
+#EMBED(%OnGetAccessTokenAsyncOKData,'OnGetAccessTokenAsyncOK'),LABEL,'OnGetAccessTokenAsyncOK',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnGetAccessTokenAsyncOK(STRING accessToken,STRING accessSecret)'&'|Data section'&'{{COLOR('&%ColorDataSection&'),PRIORITY(1)}')
+  CODE
+  #EMBED(%OnGetAccessTokenAsyncOKCode,'OnGetAccessTokenAsyncOK'),'OnGetAccessTokenAsyncOK',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnGetAccessTokenAsyncOK(STRING accessToken,STRING accessSecret)'&'|Code section'&'{{COLOR('&%ColorCodeSection&'),PRIORITY(100)}')
+%dbxGlobalName.OnGetAccessTokenAsyncError      PROCEDURE(HRESULT pHR,STRING pMessage)
+#EMBED(%OnGetAccessTokenAsyncErrorData,'OnGetAccessTokenAsyncError'),LABEL,'OnGetAccessTokenAsyncError',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnGetAccessTokenAsyncError(HRESULT pHR,STRING pMessage)'&'|Data section'&'{{COLOR('&%ColorDataSection&'),PRIORITY(1)}')
+  CODE
+  #EMBED(%OnGetAccessTokenAsyncErrorCode,'OnGetAccessTokenAsyncError'),'OnGetAccessTokenAsyncError',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnGetAccessTokenAsyncError(HRESULT pHR,STRING pMessage)'&'|Code section'&'{{COLOR('&%ColorCodeSection&'),PRIORITY(100)}')
+%dbxGlobalName.OnGetFileAsyncOK                PROCEDURE(STRING remoteFile,STRING localFile)
+#EMBED(%OnGetFileAsyncOKData,'OnGetFileAsyncOK'),LABEL,'OnGetFileAsyncOK',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnGetFileAsyncOK(STRING remoteFile,STRING localFile)'&'|Data section'&'{{COLOR('&%ColorDataSection&'),PRIORITY(1)}')
+  CODE
+  #EMBED(%OnGetFileAsyncOKCode,'OnGetFileAsyncOK'),'OnGetFileAsyncOK',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnGetFileAsyncOK(STRING remoteFile,STRING localFile)'&'|Code section'&'{{COLOR('&%ColorCodeSection&'),PRIORITY(100)}')
+%dbxGlobalName.OnGetFileAsyncError             PROCEDURE(STRING remoteFile,STRING localFile,HRESULT pHR,STRING pMessage)
+#EMBED(%OnGetFileAsyncErrorData,'OnGetFileAsyncError'),LABEL,'OnGetFileAsyncError',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnGetFileAsyncError(STRING remoteFile,STRING localFile,HRESULT pHR,STRING pMessage)'&'|Data section'&'{{COLOR('&%ColorDataSection&'),PRIORITY(1)}')
+  CODE
+  #EMBED(%OnGetFileAsyncErrorCode,'OnGetFileAsyncError'),'OnGetFileAsyncError',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnGetFileAsyncError(STRING remoteFile,STRING localFile,HRESULT pHR,STRING pMessage)'&'|Code section'&'{{COLOR('&%ColorCodeSection&'),PRIORITY(100)}')
+%dbxGlobalName.OnUploadFileAsyncOK             PROCEDURE(STRING localFile,STRING pPath,long pRevision)
+#EMBED(%OnUploadFileAsyncOKData,'OnUploadFileAsyncOK'),LABEL,'OnUploadFileAsyncOK',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnUploadFileAsyncOK(STRING localFile,STRING pPath,long pRevision)'&'|Data section'&'{{COLOR('&%ColorDataSection&'),PRIORITY(1)}')
+  CODE
+  #EMBED(%OnUploadFileAsyncOKCode,'OnUploadFileAsyncOK'),'OnUploadFileAsyncOK',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnUploadFileAsyncOK(STRING localFile,STRING pPath,long pRevision)'&'|Code section'&'{{COLOR('&%ColorCodeSection&'),PRIORITY(100)}')
+%dbxGlobalName.OnUploadFileAsyncError          PROCEDURE(STRING localFile,STRING remotePath,STRING remoteFilename,HRESULT pHR,STRING pMessage)
+#EMBED(%OnUploadFileAsyncErrorData,'OnUploadFileAsyncError'),LABEL,'OnUploadFileAsyncError',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnUploadFileAsyncError(STRING localFile,STRING remotePath,STRING remoteFilename,HRESULT pHR,STRING pMessage)'&'|Data section'&'{{COLOR('&%ColorDataSection&'),PRIORITY(1)}')
+  CODE
+  #EMBED(%OnUploadFileAsyncErrorCode,'OnUploadFileAsyncError'),'OnUploadFileAsyncError',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnUploadFileAsyncError(STRING localFile,STRING remotePath,STRING remoteFilename,HRESULT pHR,STRING pMessage)'&'|Code section'&'{{COLOR('&%ColorCodeSection&'),PRIORITY(100)}')
+%dbxGlobalName.OnDeleteAsyncOK                 PROCEDURE(STRING pPath)
+#EMBED(%OnDeleteAsyncOKData,'OnDeleteAsyncOK'),LABEL,'OnDeleteAsyncOK',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnDeleteAsyncOK(STRING pPath)'&'|Data section'&'{{COLOR('&%ColorDataSection&'),PRIORITY(1)}')
+  CODE
+  #EMBED(%OnDeleteAsyncOKCode,'OnDeleteAsyncOK'),'OnDeleteAsyncOK',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnDeleteAsyncOK(STRING pPath)'&'|Code section'&'{{COLOR('&%ColorCodeSection&'),PRIORITY(100)}')
+%dbxGlobalName.OnDeleteAsyncError              PROCEDURE(STRING pPath,HRESULT pHR,STRING pMessage)
+#EMBED(%OnDeleteAsyncErrorData,'OnDeleteAsyncError'),LABEL,'OnDeleteAsyncError',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnDeleteAsyncError(STRING pPath,HRESULT pHR,STRING pMessage)'&'|Data section'&'{{COLOR('&%ColorDataSection&'),PRIORITY(1)}')
+  CODE
+  #EMBED(%OnDeleteAsyncErrorCode,'OnDeleteAsyncError'),'OnDeleteAsyncError',TREE('Global Objects|DropBox '&%dbxGlobalName&'|OnDeleteAsyncError(STRING pPath,HRESULT pHR,STRING pMessage)'&'|Code section'&'{{COLOR('&%ColorCodeSection&'),PRIORITY(100)}')
+#ENDAT
