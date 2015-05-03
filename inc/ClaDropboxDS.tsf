@@ -1,0 +1,92 @@
+[CLASS]IdbxDatastoreClass
+[CLSID]IID_dbxDatastore 2AA0E112-B28E-49AF-9D04-BC47BADCAD4B
+[SPROC]Init
+[SPROC]Init
+[ARG]LONG lpInterface
+[SPROC]Kill
+[SPROC]GetInterfaceObject
+[SPROC]GetInterfaceAddr
+[SPROC]GetLibLocation
+[PROC]Save
+[RET]HRESULT
+[ARG]BSTRING par_file
+[PROC]Delete
+[RET]HRESULT
+[PROC]DatastoreId
+[RET]HRESULT
+[ARG]*BSTRING pRetVal
+[PROC]Manager
+[RET]HRESULT
+[ARG]LONG pRetVal
+[CLASS]IdbxDatastoreManagerClass
+[CLSID]IID_dbxDatastoreManager 9321B1CC-C4AD-4D63-809A-580881BDD130
+[SPROC]Init
+[SPROC]Init
+[ARG]LONG lpInterface
+[SPROC]Kill
+[SPROC]GetInterfaceObject
+[SPROC]GetInterfaceAddr
+[SPROC]GetLibLocation
+[PROC]List
+[RET]HRESULT
+[ARG]*VARIANT pRetVal
+[PROC]Delete
+[RET]HRESULT
+[ARG]BSTRING dsid
+[CLASS]IdbxTableClass
+[CLSID]IID_dbxTable 5284B643-8CD2-4FF6-AAFD-1ED23AFCD52E
+[SPROC]Init
+[SPROC]Init
+[ARG]LONG lpInterface
+[SPROC]Kill
+[SPROC]GetInterfaceObject
+[SPROC]GetInterfaceAddr
+[SPROC]GetLibLocation
+[PROC]Initialize
+[RET]HRESULT
+[ARG]BSTRING oauth_token
+[ARG]BSTRING dsid
+[ARG]BSTRING par_tableid
+[ARG]BSTRING uKey
+[PROC]SetField
+[RET]HRESULT
+[ARG]BSTRING fieldname
+[ARG]*VARIANT fieldvalue
+[PROC]ClearRecord
+[RET]HRESULT
+[PROC]Insert
+[RET]HRESULT
+[ARG]*VARIANT_BOOL pRetVal
+[PROC]Update
+[RET]HRESULT
+[ARG]*VARIANT_BOOL pRetVal
+[PROC]Delete
+[RET]HRESULT
+[ARG]*VARIANT_BOOL pRetVal
+[PROC]Select
+[RET]HRESULT
+[ARG]BSTRING colname
+[ARG]*VARIANT colvalue
+[ARG]BSTRING operation
+[ARG]VARIANT_BOOL ignoreCase
+[PROC]Next
+[RET]HRESULT
+[ARG]*VARIANT_BOOL pRetVal
+[PROC]Previous
+[RET]HRESULT
+[ARG]*VARIANT_BOOL pRetVal
+[PROC]Reset
+[RET]HRESULT
+[PROC]GetField
+[RET]HRESULT
+[ARG]BSTRING fieldname
+[ARG]*VARIANT pRetVal
+[PROC]tableid
+[RET]HRESULT
+[ARG]*BSTRING pRetVal
+[PROC]Datastore
+[RET]HRESULT
+[ARG]LONG pRetVal
+[PROC]Manager
+[RET]HRESULT
+[ARG]LONG pRetVal

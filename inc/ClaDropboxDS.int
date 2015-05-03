@@ -1,0 +1,84 @@
+!Generated .INC file (by the EasyCOM2INC v 2.14)
+!IDL filename: ClaDropboxDS.idl
+
+!*********** Interfaces ***********
+!IDispatch
+!IUnknown
+!IdbxDatastore
+!IdbxDatastoreManager
+!IdbxTable
+!*********** End of Interfaces ***********
+
+!*********** Data types ***********
+!*********** End of Data types ***********
+
+
+!*********** interfaces ***********
+IID_IdbxDatastore               GROUP
+data1                             LONG(9743B5C6H)
+data2                             SHORT(3FCDH)
+data3                             SHORT(44C9H)
+data4                             STRING('<0B0H><0C8H><52H><2AH><2CH><28H><9DH><0AEH>')
+                                END
+IdbxDatastore                   INTERFACE(IDispatch),COM,TYPE
+Save                              PROCEDURE(BSTRING par_file),HRESULT,RAW,PROC
+Delete                            PROCEDURE(),HRESULT,RAW,PROC
+DatastoreId                       PROCEDURE(*BSTRING pRetVal),HRESULT,RAW,PROC
+Manager                           PROCEDURE(LONG pRetVal),HRESULT,RAW,PROC
+                                END
+IID_IdbxDatastoreManager        GROUP
+data1                             LONG(0C9173E82H)
+data2                             SHORT(0A408H)
+data3                             SHORT(46B8H)
+data4                             STRING('<0ABH><0DFH><0A4H><60H><0EAH><0F4H><0D2H><1BH>')
+                                END
+IdbxDatastoreManager            INTERFACE(IDispatch),COM,TYPE
+List                              PROCEDURE(*VARIANT pRetVal),HRESULT,RAW,PROC
+Delete                            PROCEDURE(BSTRING dsid),HRESULT,RAW,PROC
+                                END
+IID_IdbxTable                   GROUP
+data1                             LONG(307A2354H)
+data2                             SHORT(0D15FH)
+data3                             SHORT(48B6H)
+data4                             STRING('<0AEH><35H><0EH><0F0H><0F7H><0FFH><6EH><0CCH>')
+                                END
+IdbxTable                       INTERFACE(IDispatch),COM,TYPE
+Initialize                        PROCEDURE(BSTRING oauth_token,BSTRING dsid,BSTRING par_tableid,BSTRING uKey),HRESULT,RAW,PROC
+SetField                          PROCEDURE(BSTRING fieldname,VARIANT fieldvalue),HRESULT,RAW,PROC
+ClearRecord                       PROCEDURE(),HRESULT,RAW,PROC
+Insert                            PROCEDURE(*VARIANT_BOOL pRetVal),HRESULT,RAW,PROC
+Update                            PROCEDURE(*VARIANT_BOOL pRetVal),HRESULT,RAW,PROC
+Delete                            PROCEDURE(*VARIANT_BOOL pRetVal),HRESULT,RAW,PROC
+Select                            PROCEDURE(BSTRING colname,VARIANT colvalue,BSTRING operation,VARIANT_BOOL ignoreCase),HRESULT,RAW,PROC
+Count                             PROCEDURE(*LONG pRetVal),HRESULT,RAW,PROC
+Next                              PROCEDURE(*VARIANT_BOOL pRetVal),HRESULT,RAW,PROC
+Previous                          PROCEDURE(*VARIANT_BOOL pRetVal),HRESULT,RAW,PROC
+Reset                             PROCEDURE(),HRESULT,RAW,PROC
+GetField                          PROCEDURE(BSTRING fieldname,*VARIANT pRetVal),HRESULT,RAW,PROC
+tableid                           PROCEDURE(*BSTRING pRetVal),HRESULT,RAW,PROC
+Datastore                         PROCEDURE(LONG pRetVal),HRESULT,RAW,PROC
+Manager                           PROCEDURE(LONG pRetVal),HRESULT,RAW,PROC
+                                END
+
+!*********** Coclasses ***********
+!coclass dbxDatastore                                                                                        
+IID_dbxDatastore                GROUP
+data1                             LONG(2AA0E112H)
+data2                             SHORT(0B28EH)
+data3                             SHORT(49AFH)
+data4                             STRING('<9DH><4H><0BCH><47H><0BAH><0DCH><0ADH><4BH>')
+                                END
+!coclass dbxDatastoreManager                                                                                 
+IID_dbxDatastoreManager         GROUP
+data1                             LONG(9321B1CCH)
+data2                             SHORT(0C4ADH)
+data3                             SHORT(4D63H)
+data4                             STRING('<80H><9AH><58H><8H><81H><0BDH><0D1H><30H>')
+                                END
+!coclass dbxTable                                                                                            
+IID_dbxTable                    GROUP
+data1                             LONG(5284B643H)
+data2                             SHORT(8CD2H)
+data3                             SHORT(4FF6H)
+data4                             STRING('<0AAH><0FDH><1EH><0D2H><3AH><0FCH><0D5H><2EH>')
+                                END

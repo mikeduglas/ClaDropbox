@@ -1,0 +1,151 @@
+// Generated .IDL file (by the OLE/COM Object Viewer)
+// 
+// typelib filename: ClaDropBoxDS.tlb
+
+[
+  uuid(72452F7D-171D-4BB2-BA1A-7386671C1401),
+  version(1.0)
+]
+library ClaDropBoxDS
+{
+    // TLib :     // TLib : mscorlib.dll : {BED7F4EA-1A96-11D2-8F08-00A0C9A6186D}
+    importlib("mscorlib.tlb");
+    // TLib : OLE Automation : {00020430-0000-0000-C000-000000000046}
+    importlib("stdole2.tlb");
+
+    // Forward declare all types defined in this typelib
+    interface IdbxDatastore;
+    interface IdbxDatastoreManager;
+    interface IdbxTable;
+
+    [
+      odl,
+      uuid(9743B5C6-3FCD-44C9-B0C8-522A2C289DAE),
+      version(1.0),
+      dual,
+      oleautomation,
+        custom({0F21F359-AB84-41E8-9A78-36D110E6D2F9}, "ClaDropBox.IdbxDatastore")    
+
+    ]
+    interface IdbxDatastore : IDispatch {
+        [id(0x60020000)]
+        HRESULT Save([in] BSTR file);
+        [id(0x60020001)]
+        HRESULT Delete();
+        [id(0x60020002)]
+        HRESULT DatastoreId([out, retval] BSTR* pRetVal);
+        [id(0x60020003)]
+        HRESULT Manager([out, retval] IdbxDatastoreManager** pRetVal);
+    };
+
+    [
+      uuid(2AA0E112-B28E-49AF-9D04-BC47BADCAD4B),
+      version(1.0),
+        custom({0F21F359-AB84-41E8-9A78-36D110E6D2F9}, "ClaDropBox.dbxDatastore")
+    ]
+    coclass dbxDatastore {
+        interface _Object;
+        [default] interface IdbxDatastore;
+    };
+
+    [
+      odl,
+      uuid(C9173E82-A408-46B8-ABDF-A460EAF4D21B),
+      version(1.0),
+      dual,
+      oleautomation,
+        custom({0F21F359-AB84-41E8-9A78-36D110E6D2F9}, "ClaDropBox.IdbxDatastoreManager")    
+
+    ]
+    interface IdbxDatastoreManager : IDispatch {
+        [id(0x60020000)]
+        HRESULT List([out, retval] VARIANT* pRetVal);
+        [id(0x60020001)]
+        HRESULT Delete([in] BSTR dsid);
+    };
+
+    [
+      uuid(9321B1CC-C4AD-4D63-809A-580881BDD130),
+      version(1.0),
+      noncreatable,
+        custom({0F21F359-AB84-41E8-9A78-36D110E6D2F9}, "ClaDropBox.dbxDatastoreManager")
+    ]
+    coclass dbxDatastoreManager {
+        interface _Object;
+        [default] interface IdbxDatastoreManager;
+    };
+
+    [
+      uuid(266F5351-BC81-4CE1-AB81-6BBAF8458110),
+      version(1.0),
+      noncreatable,
+        custom({0F21F359-AB84-41E8-9A78-36D110E6D2F9}, "ClaDropBox.dbxRecordSet")
+    ]
+    coclass dbxRecordSet {
+        [default] interface _Object;
+    };
+
+    [
+      odl,
+      uuid(307A2354-D15F-48B6-AE35-0EF0F7FF6ECC),
+      version(1.0),
+      dual,
+      oleautomation,
+        custom({0F21F359-AB84-41E8-9A78-36D110E6D2F9}, "ClaDropBox.IdbxTable")    
+
+    ]
+    interface IdbxTable : IDispatch {
+        [id(0x60020000)]
+        HRESULT Initialize(
+                        [in] BSTR oauth_token, 
+                        [in] BSTR dsid, 
+                        [in] BSTR tableid, 
+                        [in] BSTR uKey);
+        [id(0x60020001)]
+        HRESULT SetField(
+                        [in] BSTR fieldname, 
+                        [in] VARIANT fieldvalue);
+        [id(0x60020002)]
+        HRESULT ClearRecord();
+        [id(0x60020003)]
+        HRESULT Insert([out, retval] VARIANT_BOOL* pRetVal);
+        [id(0x60020004)]
+        HRESULT Update([out, retval] VARIANT_BOOL* pRetVal);
+        [id(0x60020005)]
+        HRESULT Delete([out, retval] VARIANT_BOOL* pRetVal);
+        [id(0x60020006)]
+        HRESULT Select(
+                        [in] BSTR colname, 
+                        [in] VARIANT colvalue, 
+                        [in] BSTR operation, 
+                        [in] VARIANT_BOOL ignoreCase);
+        [id(0x60020007)]
+        HRESULT Count([out, retval] long* pRetVal);
+        [id(0x60020008)]
+        HRESULT Next([out, retval] VARIANT_BOOL* pRetVal);
+        [id(0x60020009)]
+        HRESULT Previous([out, retval] VARIANT_BOOL* pRetVal);
+        [id(0x6002000a)]
+        HRESULT Reset();
+        [id(0x6002000b)]
+        HRESULT GetField(
+                        [in] BSTR fieldname, 
+                        [out, retval] VARIANT* pRetVal);
+        [id(0x6002000c)]
+        HRESULT tableid([out, retval] BSTR* pRetVal);
+        [id(0x6002000d)]
+        HRESULT Datastore([out, retval] IdbxDatastore** pRetVal);
+        [id(0x6002000e)]
+        HRESULT Manager([out, retval] IdbxDatastoreManager** pRetVal);
+    };
+
+    [
+      uuid(5284B643-8CD2-4FF6-AAFD-1ED23AFCD52E),
+      version(1.0),
+        custom({0F21F359-AB84-41E8-9A78-36D110E6D2F9}, "ClaDropBox.dbxTable")
+    ]
+    coclass dbxTable {
+        interface _Object;
+        [default] interface IdbxTable;
+    };
+};
